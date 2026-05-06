@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ============================================================
-#  VPS 开荒脚本 V1.18 — 银趴火山帮
+#  火山帮 TCP 调优工具 V2.0 — SSH 安全 / BBR / 网络加速
 #  功能：SSH管理 / Fail2ban / BBR TCP 调优
 # ============================================================
 
@@ -70,8 +70,8 @@ print_header() {
     clear
     echo ""
     box_top
-    box_title "VPS 开荒脚本 V1.18"
-    box_line "  ··银趴火山帮··" "  ${DIM}··银趴火山帮··${NC}"
+    box_title "🔥 火山帮 TCP 调优 V2.0"
+    box_line "  ⚡ SSH · BBR · TCP · Firewall" "  ${DIM}⚡ SSH · BBR · TCP · Firewall${NC}"
     box_sep
     box_title "$1"
     box_bot
@@ -1107,8 +1107,8 @@ fail2ban_menu() {
         clear
         echo ""
         box_top
-        box_title "VPS 开荒脚本 V1.18"
-        box_line "  ··银趴火山帮··" "  ${DIM}··银趴火山帮··${NC}"
+        box_title "🔥 火山帮 TCP 调优 V2.0"
+        box_line "  ⚡ SSH · BBR · TCP · Firewall" "  ${DIM}⚡ SSH · BBR · TCP · Firewall${NC}"
         box_sep
         box_title "Fail2ban 管理"
         box_sep
@@ -4258,18 +4258,93 @@ swap_menu() {
 
 
 
+
+# ── 火山帮增强：运行环境 / CLI / TCP 预设 ─────────────────────────
+need_root() {
+    if [ "$(id -u 2>/dev/null || echo 1)" != "0" ]; then
+        error "该操作需要 root 权限，请使用 sudo 或 root 用户执行"
+        exit 1
+    fi
+}
+
+show_help() {
+    cat << EOF
+🔥 火山帮 TCP 调优工具 V2.0
+
+用法：
+  bash SSH-Hardening.sh                 进入交互菜单
+  bash SSH-Hardening.sh --status        查看 SSH/BBR/tc 状态
+  bash SSH-Hardening.sh --tcp balanced  应用均衡 TCP 调优
+  bash SSH-Hardening.sh --tcp latency   应用低延迟 TCP 调优
+  bash SSH-Hardening.sh --tcp throughput 应用高吞吐 TCP 调优
+  bash SSH-Hardening.sh --install       安装到 /usr/local/bin/volcano-tcp，并创建 v/vtcp 快捷命令
+  bash SSH-Hardening.sh --update        从 GitHub 更新脚本
+  bash SSH-Hardening.sh --uninstall     卸载脚本和快捷命令
+  bash SSH-Hardening.sh --help          显示帮助
+
+说明：--tcp 会改写 /etc/sysctl.conf 前自动备份；不安装任何额外软件。
+EOF
+}
+
+quick_status() {
+    print_header "系统状态速览"
+    bbr_print_status
+    echo ""
+    echo -e "  内核：${BOLD}$(uname -r)${NC}"
+    echo -e "  系统：${BOLD}$(. /etc/os-release 2>/dev/null; echo ${PRETTY_NAME:-unknown})${NC}"
+}
+
+volcano_tcp_profile() {
+    local profile="${1:-balanced}"
+    local RMEM WMEM TCP_MEM NOTSENT ADV_WIN MIN_FREE SWAP TCP_RMEM_DEFAULT LABEL BUF_MB
+    case "$profile" in
+        balanced|default)
+            RMEM=67108864; WMEM=67108864; TCP_MEM="65536 131072 262144"; NOTSENT=262144; ADV_WIN=2; MIN_FREE=65536; SWAP=10; TCP_RMEM_DEFAULT=1048576; LABEL="均衡模式：多数 VPS / 跨境线路推荐"; BUF_MB=64 ;;
+        latency|low-latency)
+            RMEM=33554432; WMEM=33554432; TCP_MEM="49152 98304 196608"; NOTSENT=131072; ADV_WIN=1; MIN_FREE=65536; SWAP=10; TCP_RMEM_DEFAULT=524288; LABEL="低延迟模式：游戏 / SSH / 交互优先"; BUF_MB=32 ;;
+        throughput|aggressive)
+            RMEM=134217728; WMEM=134217728; TCP_MEM="131072 262144 524288"; NOTSENT=524288; ADV_WIN=3; MIN_FREE=131072; SWAP=5; TCP_RMEM_DEFAULT=1048576; LABEL="高吞吐模式：大带宽 / 高延迟 / 下载上传"; BUF_MB=128 ;;
+        *) error "未知 TCP 预设：$profile，可选 balanced / latency / throughput"; exit 1 ;;
+    esac
+    need_root
+    print_header "一键 TCP 调优：$profile"
+    echo -e "  预设：${BOLD}${LABEL}${NC}"
+    echo -e "  缓冲：${BOLD}${BUF_MB}MB${NC}  拥塞控制：${BOLD}BBR + fq${NC}"
+    echo ""
+    bbr_backup_sysctl
+    local CONFIG
+    CONFIG=$(bbr_generate_config "$RMEM" "$WMEM" "$TCP_MEM" "$NOTSENT" "$ADV_WIN" "$MIN_FREE" "$SWAP" "$TCP_RMEM_DEFAULT")
+    bbr_apply_sysctl "$CONFIG"
+    info "TCP 预设已应用：$profile ✓"
+    warn "如内核不支持 BBR，请升级内核或切换支持 BBR 的发行版内核"
+}
+
+handle_cli_args() {
+    case "${1:-}" in
+        -h|--help|help) show_help; exit 0 ;;
+        --status|status) quick_status; exit 0 ;;
+        --install|install) need_root; self_install; exit 0 ;;
+        --update|update) need_root; self_update; exit 0 ;;
+        --uninstall|uninstall) need_root; self_uninstall; exit 0 ;;
+        --tcp|tcp) volcano_tcp_profile "${2:-balanced}"; exit 0 ;;
+        "") return 0 ;;
+        *) warn "未知参数：$1"; show_help; exit 1 ;;
+    esac
+}
+
 # ══════════════════════════════════════════════════════════
 #  脚本自我管理模块
 # ══════════════════════════════════════════════════════════
 
-SCRIPT_URL="https://raw.githubusercontent.com/chnnic/SSH-Hardening/refs/heads/main/SSH-Hardening.sh"
-LOCAL_SCRIPT="/usr/local/bin/vps-tools"
+SCRIPT_URL="https://raw.githubusercontent.com/cshaizhihao/SSH-Hardening/refs/heads/main/SSH-Hardening.sh"
+LOCAL_SCRIPT="/usr/local/bin/volcano-tcp"
+LEGACY_SCRIPT="/usr/local/bin/vps-tools"
 
 # ── 安装脚本到本地（设置快捷键 v）────────────────────────
 self_install() {
     print_header "安装脚本到本地"
     echo -e "  将脚本安装到 ${BOLD}${LOCAL_SCRIPT}${NC}"
-    echo -e "  安装后输入 ${GREEN}v${NC} 或 ${GREEN}V${NC} 即可快速呼出"
+    echo -e "  安装后输入 ${GREEN}v${NC} / ${GREEN}vtcp${NC} / ${GREEN}volcano-tcp${NC} 即可快速呼出"
     echo ""
 
     # 优先复制当前运行的脚本
@@ -4292,6 +4367,7 @@ self_install() {
     # 创建系统级命令 v / V（最可靠，无需 source）
     ln -sf "$LOCAL_SCRIPT" /usr/local/bin/v 2>/dev/null && info "系统命令 v 已创建 ✓"
     ln -sf "$LOCAL_SCRIPT" /usr/local/bin/V 2>/dev/null && info "系统命令 V 已创建 ✓"
+    ln -sf "$LOCAL_SCRIPT" /usr/local/bin/vtcp 2>/dev/null && info "系统命令 vtcp 已创建 ✓"
 
     # 写入 alias 到 shell 配置（增强兼容性）
     local WROTE_ALIAS=false
@@ -4303,6 +4379,7 @@ self_install() {
                 echo "# VPS 开荒脚本快捷键"
                 echo "alias v='${LOCAL_SCRIPT}'"
                 echo "alias V='${LOCAL_SCRIPT}'"
+                echo "alias vtcp='${LOCAL_SCRIPT}'"
             } >> "$RC"
             info "alias 已写入 ${RC} ✓"
             WROTE_ALIAS=true
@@ -4354,6 +4431,7 @@ self_update() {
     # 确保 v 命令还在
     ln -sf "$LOCAL_SCRIPT" /usr/local/bin/v 2>/dev/null
     ln -sf "$LOCAL_SCRIPT" /usr/local/bin/V 2>/dev/null
+    ln -sf "$LOCAL_SCRIPT" /usr/local/bin/vtcp 2>/dev/null
 
     info "更新完成 ✓"
     warn "即将用新版本重启脚本..."
@@ -4369,6 +4447,7 @@ self_uninstall() {
     echo -e "  ${DIM}${LOCAL_SCRIPT}${NC}"
     echo -e "  ${DIM}/usr/local/bin/v${NC}"
     echo -e "  ${DIM}/usr/local/bin/V${NC}"
+    echo -e "  ${DIM}/usr/local/bin/vtcp${NC}"
     echo -e "  ${DIM}各 shell 配置文件中的 alias v=...${NC}"
     echo ""
     read -rp "  确认删除？(Y/n，默认Y): " CONFIRM
@@ -4379,13 +4458,13 @@ self_uninstall() {
     rm -f "$LOCAL_SCRIPT" && info "已删除 ${LOCAL_SCRIPT} ✓"
 
     # 删除系统命令
-    rm -f /usr/local/bin/v /usr/local/bin/V && info "已删除系统命令 v/V ✓"
+    rm -f /usr/local/bin/v /usr/local/bin/V /usr/local/bin/vtcp /usr/local/bin/volcano-tcp "$LEGACY_SCRIPT" && info "已删除系统命令 v/V/vtcp 与旧路径 ✓"
 
     # 清理 shell 配置文件中的 alias
     for RC in /root/.bashrc /root/.bash_profile ~/.bashrc ~/.bash_profile ~/.zshrc; do
         [ -f "$RC" ] || continue
         if grep -q "alias v=" "$RC" 2>/dev/null; then
-            grep -v "alias v=\|alias V=\|VPS 开荒脚本快捷键" "$RC" > "${RC}.tmp"                 && mv "${RC}.tmp" "$RC"
+            grep -v "alias v=\|alias V=\|alias vtcp=\|VPS 开荒脚本快捷键" "$RC" > "${RC}.tmp"                 && mv "${RC}.tmp" "$RC"
             info "已清理 ${RC} ✓"
         fi
     done
@@ -4407,8 +4486,8 @@ self_check_first_run() {
     clear
     echo ""
     box_top
-    box_title "VPS 开荒脚本 V1.18"
-    box_line "  ··银趴火山帮··" "  ${DIM}··银趴火山帮··${NC}"
+    box_title "🔥 火山帮 TCP 调优 V2.0"
+    box_line "  ⚡ SSH · BBR · TCP · Firewall" "  ${DIM}⚡ SSH · BBR · TCP · Firewall${NC}"
     box_sep
     box_title "首次运行检测"
     box_bot
@@ -4452,6 +4531,7 @@ self_manage_menu() {
             echo -e "  状  态  ：${YELLOW}${BOLD}未安装${NC}"
         fi
         echo -e "  快捷键 v：${BOLD}$([ "$HAS_CMD" = true ] && echo "${GREEN}已设置${NC}" || echo "${YELLOW}未设置${NC}")${NC}"
+        echo -e "  快捷键 vtcp：${BOLD}$([ -f /usr/local/bin/vtcp ] && echo "${GREEN}已设置${NC}" || echo "${YELLOW}未设置${NC}")${NC}"
         echo ""
         echo -e "  ${CYAN}$(printf '─%.0s' $(seq 1 38))${NC}"
         echo -e "  ${GREEN}1${NC}) 安装脚本 + 设置快捷键 v"
@@ -4492,8 +4572,8 @@ main_menu() {
         clear
         echo ""
         box_top
-        box_title "VPS 开荒脚本 V1.18"
-        box_line "  ··银趴火山帮··" "  ${DIM}··银趴火山帮··${NC}"
+        box_title "🔥 火山帮 TCP 调优 V2.0"
+        box_line "  ⚡ SSH · BBR · TCP · Firewall" "  ${DIM}⚡ SSH · BBR · TCP · Firewall${NC}"
         box_sep
         # 收集状态数据
         local FW_TYPE FW_STAT FW_COLOR
@@ -4570,5 +4650,6 @@ main_menu() {
     done
 }
 
+handle_cli_args "$@"
 self_check_first_run
 main_menu
