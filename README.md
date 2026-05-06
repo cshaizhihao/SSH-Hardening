@@ -1,64 +1,37 @@
 # 🔥 IMPART TCP
 
-基于 [`chnnic/SSH-Hardening`](https://github.com/chnnic/SSH-Hardening) fork 增强，定位为 VPS 初始化、SSH 加固、Fail2ban、防火墙与 BBR/TCP 调优的一体化脚本。
+> 银趴火山帮 鸡儿硬邦邦
 
-> 当前增强版：V2.0 · IMPART TCP · 银趴火山帮 鸡儿硬邦邦
+基于 [`chnnic/SSH-Hardening`](https://github.com/chnnic/SSH-Hardening) fork 增强的 VPS 初始化与 TCP 调优脚本。主打：SSH 加固、Fail2ban、防火墙、BBR/FQ、TCP 参数调优、脚本自安装与快速更新。
 
-## ✨ 本次增强方向
+```text
+    ██╗███╗   ███╗██████╗  █████╗ ██████╗ ████████╗    ████████╗ ██████╗██████╗
+    ██║████╗ ████║██╔══██╗██╔══██╗██╔══██╗╚══██╔══╝    ╚══██╔══╝██╔════╝██╔══██╗
+    ██║██╔████╔██║██████╔╝███████║██████╔╝   ██║          ██║   ██║     ██████╔╝
+    ██║██║╚██╔╝██║██╔═══╝ ██╔══██║██╔══██╗   ██║          ██║   ██║     ██╔═══╝
+    ██║██║ ╚═╝ ██║██║     ██║  ██║██║  ██║   ██║          ██║   ╚██████╗██║
+    ╚═╝╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝          ╚═╝    ╚═════╝╚═╝
+```
 
-- 🎨 **整体界面美化**：主标题、菜单、帮助信息与主页面艺术字统一升级为 `IMPART TCP`，副标语为“银趴火山帮 鸡儿硬邦邦”。
-- 🧭 **操作逻辑优化**：保留交互式菜单，同时新增命令行参数与智能向导，适合一键执行和自动化调用。
-- 🚀 **运行方式优化**：支持 `--status`、`--tcp`、`--install`、`--update`、`--uninstall` 等非交互模式。
-- 📦 **安装 / 卸载优化**：默认安装到 `/usr/local/bin/volcano-tcp`，并创建 `v` / `V` / `vtcp` 快捷命令。
-- 🌐 **TCP 调优优化**：新增三套预设：均衡、低延迟、高吞吐，自动备份 sysctl 配置后应用。
+## ✨ 增强内容
 
-## 🚀 快速使用
+- 🎨 主菜单加入 `IMPART TCP` 艺术字和品牌标语。
+- 🧭 保留交互式菜单，新增非交互 CLI 参数。
+- 🧪 新增 TCP Doctor：快速检查内核、BBR、FQ、网卡、内存并给建议。
+- 🌐 新增三套 TCP 预设：`balanced` / `latency` / `throughput`。
+- 📦 优化安装、更新、卸载，支持 `v` / `V` / `vtcp` / `volcano-tcp` 快捷命令。
+- 🛡️ TCP 配置写入 `/etc/sysctl.d/99-impart-tcp.conf`，避免直接覆盖 `/etc/sysctl.conf`。
 
-### 直接运行交互菜单
+## 🚀 快速运行
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/cshaizhihao/SSH-Hardening/refs/heads/main/SSH-Hardening.sh)
 ```
 
-### 查看帮助
+## 📦 安装到系统
 
 ```bash
-bash SSH-Hardening.sh --help
-```
-
-### 查看当前状态
-
-```bash
-bash SSH-Hardening.sh --status
-```
-
-### 运行环境体检
-
-```bash
-bash SSH-Hardening.sh --doctor
-```
-
-### 一键 TCP 调优
-
-```bash
-# 均衡模式：多数 VPS / 跨境线路推荐
-bash SSH-Hardening.sh --tcp balanced
-
-# 低延迟模式：游戏 / SSH / 交互优先
-bash SSH-Hardening.sh --tcp latency
-
-# 高吞吐模式：大带宽 / 高延迟 / 下载上传
-bash SSH-Hardening.sh --tcp throughput
-```
-
-> `--tcp` 会修改 `/etc/sysctl.conf`，执行前会自动生成备份。
-
-## 📦 安装与卸载
-
-### 安装到系统
-
-```bash
-bash SSH-Hardening.sh --install
+bash <(curl -fsSL https://raw.githubusercontent.com/cshaizhihao/SSH-Hardening/refs/heads/main/SSH-Hardening.sh) --install
 ```
 
 安装后可使用：
@@ -70,23 +43,53 @@ vtcp
 volcano-tcp
 ```
 
-### 更新
+## 🧪 常用命令
 
 ```bash
-volcano-tcp --update
+# 查看帮助
+volcano-tcp --help
+
+# 查看版本
+volcano-tcp --version
+
+# 查看当前 SSH / BBR / tc 状态
+volcano-tcp --status
+
+# 运行环境体检与建议
+volcano-tcp --doctor
+
+# 查看 TCP 预设说明
+volcano-tcp --profiles
 ```
 
-### 卸载
+## 🌐 一键 TCP 调优
 
 ```bash
-volcano-tcp --uninstall
+# 均衡模式：多数 VPS / 代理 / 建站 / 日常综合，默认推荐
+volcano-tcp --tcp balanced
+
+# 低延迟模式：SSH / 游戏 / 远程桌面 / 小包优先
+volcano-tcp --tcp latency
+
+# 高吞吐模式：大带宽 / 高延迟 / 下载上传优先
+volcano-tcp --tcp throughput
 ```
+
+调优配置会写入：
+
+```text
+/etc/sysctl.d/99-impart-tcp.conf
+```
+
+如已有旧配置，脚本会自动备份同路径历史文件。
 
 ## 🧩 功能模块
 
 - SSH 工具集
 - Fail2ban 管理
-- BBR TCP 调优 / 智能向导 / TCP Doctor
+- BBR TCP 调优
+- 火山帮智能 TCP 向导
+- TCP Doctor 环境体检
 - 防火墙管理
 - DNS 优化
 - 系统换源
@@ -95,14 +98,24 @@ volcano-tcp --uninstall
 - 端口转发
 - 时间同步
 - Swap 管理
-- 脚本自我管理
+- 脚本管理：安装 / 更新 / 卸载
+
+## 🔄 更新与卸载
+
+```bash
+# 更新
+volcano-tcp --update
+
+# 卸载
+volcano-tcp --uninstall
+```
 
 ## ⚠️ 注意事项
 
-- 本仓库只提供脚本，不会自动在你的机器上安装或执行调优。
 - TCP 调优需要 root 权限。
-- 建议先在测试机验证参数，再应用到生产环境。
-- 如果内核不支持 BBR，需要升级内核或切换支持 BBR 的发行版内核。
+- 建议先在测试机验证，再应用到生产环境。
+- 如果系统内核不支持 BBR，需要升级内核或切换支持 BBR 的发行版内核。
+- `tc` 限速、`initcwnd` 等能力依赖系统权限；LXC/OpenVZ 等容器可能受宿主机限制。
 
 ## 上游来源
 

@@ -1344,7 +1344,7 @@ f2b_logs() {
 # ══════════════════════════════════════════════════════════
 
 SERVICE_TC="/etc/systemd/system/tc-fq.service"
-SYSCTL_FILE="/etc/sysctl.conf"
+SYSCTL_FILE="/etc/sysctl.d/99-impart-tcp.conf"
 
 # ── 状态显示 ──────────────────────────────────────────────
 bbr_print_status() {
@@ -1383,7 +1383,7 @@ bbr_backup_sysctl() {
 
 # ── 还原 sysctl ───────────────────────────────────────────
 bbr_restore_sysctl() {
-    print_header "还原 sysctl.conf"
+    print_header "还原 IMPART TCP sysctl 配置"
     local BACKUPS=()
     local BACKUPS=()
     while IFS= read -r _bline; do BACKUPS+=("$_bline"); done < <(ls -t "${SYSCTL_FILE}.bak."* 2>/dev/null)
@@ -1423,10 +1423,10 @@ bbr_restore_sysctl() {
 # ── 应用 sysctl ───────────────────────────────────────────
 bbr_apply_sysctl() {
     local CONFIG="$1"
-    rm -f "$SYSCTL_FILE"
+    mkdir -p "$(dirname "$SYSCTL_FILE")" 2>/dev/null || true
     echo "$CONFIG" > "$SYSCTL_FILE"
     sysctl -p "$SYSCTL_FILE" > /dev/null 2>&1
-    info "sysctl 配置已应用 ✓"
+    info "sysctl 配置已应用到 ${SYSCTL_FILE} ✓"
 }
 
 # ── 应用 tc 限速 ──────────────────────────────────────────
@@ -1919,8 +1919,8 @@ bbr_menu() {
         echo -e "  ${GREEN}3${NC}) 手动选择缓冲区大小"
         echo -e "  ${GREEN}4${NC}) 限速设置（tc）"
         echo -e "  ${GREEN}5${NC}) initcwnd 设置"
-        echo -e "  ${GREEN}6${NC}) 备份 sysctl.conf"
-        echo -e "  ${GREEN}7${NC}) 还原 sysctl.conf"
+        echo -e "  ${GREEN}6${NC}) 备份 TCP sysctl 配置"
+        echo -e "  ${GREEN}7${NC}) 还原 TCP sysctl 配置"
         echo -e "  ${RED}0${NC}) 返回主菜单"
             echo -e "  ${RED}00${NC}) 退出脚本"
         echo -e "  ${CYAN}$(printf '─%.0s' $(seq 1 38))${NC}"
@@ -2874,7 +2874,7 @@ ip_disable_v6() {
     [ -z "${CONFIRM}" ] && CONFIRM="y"
     if ! echo "${CONFIRM}" | grep -qiE '^y(es)?$'; then warn "已取消"; return; fi
 
-    local SYSCTL_FILE="/etc/sysctl.conf"
+    local SYSCTL_FILE="/etc/sysctl.d/99-impart-tcp.conf"
 
     # 写入 sysctl
     for KEY in net.ipv6.conf.all.disable_ipv6 net.ipv6.conf.default.disable_ipv6 net.ipv6.conf.lo.disable_ipv6; do
@@ -2900,7 +2900,7 @@ ip_disable_v6() {
 
 ip_enable_v6() {
     print_header "开启 IPv6"
-    local SYSCTL_FILE="/etc/sysctl.conf"
+    local SYSCTL_FILE="/etc/sysctl.d/99-impart-tcp.conf"
 
     # 移除或改为 0
     for KEY in net.ipv6.conf.all.disable_ipv6 net.ipv6.conf.default.disable_ipv6 net.ipv6.conf.lo.disable_ipv6; do
@@ -4365,6 +4365,7 @@ ${APP_SLOGAN}
   bash SSH-Hardening.sh                 进入交互菜单
   bash SSH-Hardening.sh --status        查看 SSH/BBR/tc 状态
   bash SSH-Hardening.sh --doctor        运行环境体检与建议
+  bash SSH-Hardening.sh --profiles      查看 TCP 调优预设说明
   bash SSH-Hardening.sh --tcp balanced  应用均衡 TCP 调优
   bash SSH-Hardening.sh --tcp latency   应用低延迟 TCP 调优
   bash SSH-Hardening.sh --tcp throughput 应用高吞吐 TCP 调优
@@ -4373,7 +4374,7 @@ ${APP_SLOGAN}
   bash SSH-Hardening.sh --uninstall     卸载脚本和快捷命令
   bash SSH-Hardening.sh --help          显示帮助
 
-说明：--tcp 会改写 /etc/sysctl.conf 前自动备份；不安装任何额外软件。
+说明：--tcp 会写入 ${SYSCTL_FILE}，执行前自动备份旧配置；不安装任何额外软件。
 EOF
 }
 
@@ -4383,6 +4384,26 @@ quick_status() {
     echo ""
     echo -e "  内核：${BOLD}$(uname -r)${NC}"
     echo -e "  系统：${BOLD}$(. /etc/os-release 2>/dev/null; echo ${PRETTY_NAME:-unknown})${NC}"
+}
+
+volcano_tcp_profiles() {
+    cat << EOF
+${APP_TITLE}
+${APP_SLOGAN}
+
+TCP 预设：
+  balanced    🌐 均衡跨境：多数 VPS / 代理 / 建站 / 日常综合，默认推荐
+  latency     🎮 低延迟交互：SSH / 游戏 / 远程桌面 / 小包优先
+  throughput  🚀 高吞吐传输：大带宽 / 高延迟 / 下载上传优先
+
+示例：
+  bash SSH-Hardening.sh --tcp balanced
+  bash SSH-Hardening.sh --tcp latency
+  bash SSH-Hardening.sh --tcp throughput
+
+配置文件：
+  ${SYSCTL_FILE}
+EOF
 }
 
 volcano_tcp_doctor() {
@@ -4451,6 +4472,7 @@ handle_cli_args() {
         -v|--version|version) echo "$APP_NAME $APP_VERSION"; exit 0 ;;
         --status|status) quick_status; exit 0 ;;
         --doctor|doctor) volcano_tcp_doctor; exit 0 ;;
+        --profiles|profiles) volcano_tcp_profiles; exit 0 ;;
         --install|install) need_root; self_install; exit 0 ;;
         --update|update) need_root; self_update; exit 0 ;;
         --uninstall|uninstall) need_root; self_uninstall; exit 0 ;;
