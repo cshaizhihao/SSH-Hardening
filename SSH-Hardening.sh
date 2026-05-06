@@ -5,6 +5,18 @@
 #  功能：SSH管理 / Fail2ban / BBR TCP 调优
 # ============================================================
 
+APP_NAME="IMPART TCP"
+APP_VERSION="V2.0"
+APP_TITLE="🔥 火山帮 TCP 调优 ${APP_VERSION}"
+APP_SUBTITLE="⚡ SSH · BBR · TCP · Firewall"
+APP_SLOGAN="银趴火山帮 鸡儿硬邦邦"
+APP_STACK="BBR · FQ · SYSCTL · SSH HARDENING"
+APP_REPO="cshaizhihao/SSH-Hardening"
+SCRIPT_URL="https://raw.githubusercontent.com/${APP_REPO}/refs/heads/main/SSH-Hardening.sh"
+LOCAL_SCRIPT="/usr/local/bin/volcano-tcp"
+LEGACY_SCRIPT="/usr/local/bin/vps-tools"
+COMMAND_LINKS="v V vtcp volcano-tcp"
+
 SSHD_CONFIG="/etc/ssh/sshd_config"
 AUTH_KEYS="$HOME/.ssh/authorized_keys"
 
@@ -83,7 +95,7 @@ volcano_art_banner() {
     ╚═╝╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝          ╚═╝    ╚═════╝╚═╝
 EOF
     echo -e "${NC}"
-    echo -e "  ${YELLOW}${BOLD}银趴火山帮 鸡儿硬邦邦${NC}  ${DIM}BBR · FQ · SYSCTL · SSH HARDENING${NC}"
+    echo -e "  ${YELLOW}${BOLD}${APP_SLOGAN}${NC}  ${DIM}${APP_STACK}${NC}"
     echo -e "  ${CYAN}$(printf '━%.0s' $(seq 1 82))${NC}"
 }
 
@@ -92,8 +104,8 @@ print_header() {
     safe_clear
     echo ""
     box_top
-    box_title "🔥 火山帮 TCP 调优 V2.0"
-    box_line "  ⚡ SSH · BBR · TCP · Firewall" "  ${DIM}⚡ SSH · BBR · TCP · Firewall${NC}"
+    box_title "$APP_TITLE"
+    box_line "  $APP_SUBTITLE" "  ${DIM}${APP_SUBTITLE}${NC}"
     box_sep
     box_title "$1"
     box_bot
@@ -1129,8 +1141,8 @@ fail2ban_menu() {
         safe_clear
         echo ""
         box_top
-        box_title "🔥 火山帮 TCP 调优 V2.0"
-        box_line "  ⚡ SSH · BBR · TCP · Firewall" "  ${DIM}⚡ SSH · BBR · TCP · Firewall${NC}"
+        box_title "$APP_TITLE"
+        box_line "  $APP_SUBTITLE" "  ${DIM}${APP_SUBTITLE}${NC}"
         box_sep
         box_title "Fail2ban 管理"
         box_sep
@@ -4346,7 +4358,8 @@ need_root() {
 
 show_help() {
     cat << EOF
-🔥 火山帮 TCP 调优工具 V2.0
+${APP_TITLE}
+${APP_SLOGAN}
 
 用法：
   bash SSH-Hardening.sh                 进入交互菜单
@@ -4435,6 +4448,7 @@ volcano_tcp_profile() {
 handle_cli_args() {
     case "${1:-}" in
         -h|--help|help) show_help; exit 0 ;;
+        -v|--version|version) echo "$APP_NAME $APP_VERSION"; exit 0 ;;
         --status|status) quick_status; exit 0 ;;
         --doctor|doctor) volcano_tcp_doctor; exit 0 ;;
         --install|install) need_root; self_install; exit 0 ;;
@@ -4450,9 +4464,20 @@ handle_cli_args() {
 #  脚本自我管理模块
 # ══════════════════════════════════════════════════════════
 
-SCRIPT_URL="https://raw.githubusercontent.com/cshaizhihao/SSH-Hardening/refs/heads/main/SSH-Hardening.sh"
-LOCAL_SCRIPT="/usr/local/bin/volcano-tcp"
-LEGACY_SCRIPT="/usr/local/bin/vps-tools"
+create_command_links() {
+    local cmd
+    for cmd in $COMMAND_LINKS; do
+        ln -sf "$LOCAL_SCRIPT" "/usr/local/bin/$cmd" 2>/dev/null && info "系统命令 $cmd 已创建 ✓"
+    done
+}
+
+remove_command_links() {
+    local cmd
+    for cmd in $COMMAND_LINKS; do
+        rm -f "/usr/local/bin/$cmd" 2>/dev/null
+    done
+    rm -f "$LOCAL_SCRIPT" "$LEGACY_SCRIPT" 2>/dev/null
+}
 
 # ── 安装脚本到本地（设置快捷键 v）────────────────────────
 self_install() {
@@ -4479,9 +4504,7 @@ self_install() {
     info "脚本已安装到 ${LOCAL_SCRIPT} ✓"
 
     # 创建系统级命令 v / V（最可靠，无需 source）
-    ln -sf "$LOCAL_SCRIPT" /usr/local/bin/v 2>/dev/null && info "系统命令 v 已创建 ✓"
-    ln -sf "$LOCAL_SCRIPT" /usr/local/bin/V 2>/dev/null && info "系统命令 V 已创建 ✓"
-    ln -sf "$LOCAL_SCRIPT" /usr/local/bin/vtcp 2>/dev/null && info "系统命令 vtcp 已创建 ✓"
+    create_command_links
 
     # 写入 alias 到 shell 配置（增强兼容性）
     local WROTE_ALIAS=false
@@ -4543,9 +4566,7 @@ self_update() {
     rm -f "$TMP_FILE"
 
     # 确保 v 命令还在
-    ln -sf "$LOCAL_SCRIPT" /usr/local/bin/v 2>/dev/null
-    ln -sf "$LOCAL_SCRIPT" /usr/local/bin/V 2>/dev/null
-    ln -sf "$LOCAL_SCRIPT" /usr/local/bin/vtcp 2>/dev/null
+    create_command_links
 
     info "更新完成 ✓"
     warn "即将用新版本重启脚本..."
@@ -4569,10 +4590,8 @@ self_uninstall() {
     if ! echo "$CONFIRM" | grep -qiE '^y(es)?$'; then warn "已取消"; return; fi
 
     # 删除本地脚本
-    rm -f "$LOCAL_SCRIPT" && info "已删除 ${LOCAL_SCRIPT} ✓"
-
-    # 删除系统命令
-    rm -f /usr/local/bin/v /usr/local/bin/V /usr/local/bin/vtcp /usr/local/bin/volcano-tcp "$LEGACY_SCRIPT" && info "已删除系统命令 v/V/vtcp 与旧路径 ✓"
+    remove_command_links
+    info "已删除本地脚本、快捷命令与旧路径 ✓"
 
     # 清理 shell 配置文件中的 alias
     for RC in /root/.bashrc /root/.bash_profile ~/.bashrc ~/.bash_profile ~/.zshrc; do
@@ -4600,8 +4619,8 @@ self_check_first_run() {
     safe_clear
     echo ""
     box_top
-    box_title "🔥 火山帮 TCP 调优 V2.0"
-    box_line "  ⚡ SSH · BBR · TCP · Firewall" "  ${DIM}⚡ SSH · BBR · TCP · Firewall${NC}"
+    box_title "$APP_TITLE"
+    box_line "  $APP_SUBTITLE" "  ${DIM}${APP_SUBTITLE}${NC}"
     box_sep
     box_title "首次运行检测"
     box_bot
@@ -4688,8 +4707,8 @@ main_menu() {
         volcano_art_banner
         echo ""
         box_top
-        box_title "🔥 火山帮 TCP 调优 V2.0"
-        box_line "  ⚡ SSH · BBR · TCP · Firewall" "  ${DIM}⚡ SSH · BBR · TCP · Firewall${NC}"
+        box_title "$APP_TITLE"
+        box_line "  $APP_SUBTITLE" "  ${DIM}${APP_SUBTITLE}${NC}"
         box_sep
         # 收集状态数据
         local FW_TYPE FW_STAT FW_COLOR
