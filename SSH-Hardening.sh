@@ -65,6 +65,21 @@ box_empty() {
     echo ""
 }
 
+# 火山帮主视觉 Banner：只在主菜单展示，避免子菜单刷屏
+volcano_art_banner() {
+    echo -e "${RED}${BOLD}"
+    cat << 'EOF'
+        __      __   ____    __     ______   ___     _   __   ____ 
+        \ \    / /  / __ \  / /    / ____/  /   |   / | / /  / __ \
+         \ \  / /  / / / / / /    / /      / /| |  /  |/ /  / / / /
+          \ \/ /  / /_/ / / /___ / /___   / ___ | / /|  /  / /_/ / 
+           \__/   \____/ /_____/ \____/  /_/  |_|/_/ |_/   \____/  
+EOF
+    echo -e "${NC}"
+    echo -e "  ${YELLOW}${BOLD}🔥 火山帮 TCP 调优 V2.0${NC}  ${DIM}SSH Hardening · BBR · FQ · SYSCTL${NC}"
+    echo -e "  ${CYAN}$(printf '━%.0s' $(seq 1 66))${NC}"
+}
+
 # 统一标题栏
 print_header() {
     clear
@@ -1106,6 +1121,8 @@ fail2ban_menu() {
 
         clear
         echo ""
+        volcano_art_banner
+        echo ""
         box_top
         box_title "🔥 火山帮 TCP 调优 V2.0"
         box_line "  ⚡ SSH · BBR · TCP · Firewall" "  ${DIM}⚡ SSH · BBR · TCP · Firewall${NC}"
@@ -1652,7 +1669,7 @@ bbr_menu_manual() {
     echo -e "  ${RED}00${NC}) 退出脚本"
     echo -e "  ${CYAN}$(printf '─%.0s' $(seq 1 38))${NC}"
     echo ""
-    read -rp "  请选择 [0-6]: " CH
+    read -rp "  请选择 [0-7]: " CH
 
     local RMEM WMEM ADV_WIN NOTSENT TCP_RMEM_DEFAULT BUF_LBL
     case "$CH" in
@@ -1820,6 +1837,59 @@ EOF
     info "initcwnd 已设置为 ${VAL}，重启后自动生效 ✓"
 }
 
+# ── 火山帮智能调优向导 ───────────────────────────────────────
+bbr_smart_wizard() {
+    print_header "🔥 火山帮智能 TCP 向导"
+    local MEM_KB MEM_MB KERNEL CUR_CC
+    MEM_KB=$(grep MemTotal /proc/meminfo 2>/dev/null | awk '{print $2}')
+    MEM_MB=$(( ${MEM_KB:-0} / 1024 ))
+    KERNEL=$(uname -r 2>/dev/null || echo unknown)
+    CUR_CC=$(sysctl -n net.ipv4.tcp_congestion_control 2>/dev/null || echo unknown)
+
+    echo -e "  ${BOLD}检测结果${NC}"
+    echo -e "  内存：${GREEN}${MEM_MB}MB${NC}  内核：${GREEN}${KERNEL}${NC}  当前拥塞控制：${GREEN}${CUR_CC}${NC}"
+    echo ""
+    echo -e "  ${CYAN}$(printf '─%.0s' $(seq 1 50))${NC}"
+    echo -e "  ${GREEN}1${NC}) 🌐 均衡跨境  — 默认推荐，网页/代理/日常综合"
+    echo -e "  ${GREEN}2${NC}) 🎮 低延迟交互 — SSH/游戏/远程桌面/小包优先"
+    echo -e "  ${GREEN}3${NC}) 🚀 高吞吐传输 — 大带宽/高延迟/下载上传优先"
+    echo -e "  ${GREEN}4${NC}) 🧠 自动推荐  — 根据内存给出保守推荐"
+    echo -e "  ${RED}0${NC}) 返回"
+    echo -e "  ${RED}00${NC}) 退出脚本"
+    echo -e "  ${CYAN}$(printf '─%.0s' $(seq 1 50))${NC}"
+    echo ""
+    read -rp "  请选择 [0-4]: " CH
+
+    local PROFILE=""
+    case "$CH" in
+        1) PROFILE="balanced" ;;
+        2) PROFILE="latency" ;;
+        3) PROFILE="throughput" ;;
+        4)
+            if [ "$MEM_MB" -lt 768 ]; then
+                PROFILE="latency"
+                warn "检测到小内存机器，推荐低延迟/轻量参数，避免缓冲区过大"
+            elif [ "$MEM_MB" -lt 1536 ]; then
+                PROFILE="balanced"
+                info "检测到 1GB 左右机器，推荐均衡模式"
+            else
+                PROFILE="balanced"
+                info "检测到 2GB+ 机器，默认推荐均衡；如跑大流量可手动选高吞吐"
+            fi
+            ;;
+        0) return ;;
+        00) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
+        *) warn "无效选项"; return ;;
+    esac
+
+    echo ""
+    echo -e "  将应用预设：${BOLD}${PROFILE}${NC}"
+    read -rp "  确认执行？(Y/n，默认Y): " CONFIRM
+    [ -z "$CONFIRM" ] && CONFIRM="y"
+    if ! echo "$CONFIRM" | grep -qiE '^y(es)?$'; then warn "已取消"; return; fi
+    volcano_tcp_profile "$PROFILE"
+}
+
 # ── BBR 主菜单 ────────────────────────────────────────────
 bbr_menu() {
     while true; do
@@ -1827,12 +1897,13 @@ bbr_menu() {
         bbr_print_status
         echo ""
         echo -e "  ${CYAN}$(printf '─%.0s' $(seq 1 38))${NC}"
-        echo -e "  ${GREEN}1${NC}) 自动配置（根据内存 / 延迟 / 带宽计算）"
-        echo -e "  ${GREEN}2${NC}) 手动选择缓冲区大小"
-        echo -e "  ${GREEN}3${NC}) 限速设置（tc）"
-        echo -e "  ${GREEN}4${NC}) initcwnd 设置"
-        echo -e "  ${GREEN}5${NC}) 备份 sysctl.conf"
-        echo -e "  ${GREEN}6${NC}) 还原 sysctl.conf"
+        echo -e "  ${GREEN}1${NC}) 🔥 火山帮智能向导（推荐）"
+        echo -e "  ${GREEN}2${NC}) 自动配置（根据内存 / 延迟 / 带宽计算）"
+        echo -e "  ${GREEN}3${NC}) 手动选择缓冲区大小"
+        echo -e "  ${GREEN}4${NC}) 限速设置（tc）"
+        echo -e "  ${GREEN}5${NC}) initcwnd 设置"
+        echo -e "  ${GREEN}6${NC}) 备份 sysctl.conf"
+        echo -e "  ${GREEN}7${NC}) 还原 sysctl.conf"
         echo -e "  ${RED}0${NC}) 返回主菜单"
             echo -e "  ${RED}00${NC}) 退出脚本"
         echo -e "  ${CYAN}$(printf '─%.0s' $(seq 1 38))${NC}"
@@ -1840,12 +1911,13 @@ bbr_menu() {
         read -rp "  请选择 [0-6]: " CH
 
         case "$CH" in
-            1) bbr_menu_auto ;;
-            2) bbr_menu_manual ;;
-            3) bbr_menu_tc ;;
-            4) bbr_menu_initcwnd ;;
-            5) bbr_backup_sysctl ;;
-            6) bbr_restore_sysctl ;;
+            1) bbr_smart_wizard ;;
+            2) bbr_menu_auto ;;
+            3) bbr_menu_manual ;;
+            4) bbr_menu_tc ;;
+            5) bbr_menu_initcwnd ;;
+            6) bbr_backup_sysctl ;;
+            7) bbr_restore_sysctl ;;
             0) return ;;
             00) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
             *) warn "无效选项"; sleep 1; continue ;;
