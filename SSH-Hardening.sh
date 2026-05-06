@@ -65,24 +65,31 @@ box_empty() {
     echo ""
 }
 
+safe_clear() {
+    if [ -n "${TERM:-}" ] && [ "$TERM" != "dumb" ]; then
+        clear 2>/dev/null || true
+    fi
+}
+
 # 火山帮主视觉 Banner：只在主菜单展示，避免子菜单刷屏
 volcano_art_banner() {
     echo -e "${RED}${BOLD}"
     cat << 'EOF'
-        __      __   ____    __     ______   ___     _   __   ____ 
-        \ \    / /  / __ \  / /    / ____/  /   |   / | / /  / __ \
-         \ \  / /  / / / / / /    / /      / /| |  /  |/ /  / / / /
-          \ \/ /  / /_/ / / /___ / /___   / ___ | / /|  /  / /_/ / 
-           \__/   \____/ /_____/ \____/  /_/  |_|/_/ |_/   \____/  
+    ██╗███╗   ███╗██████╗  █████╗ ██████╗ ████████╗    ████████╗ ██████╗██████╗
+    ██║████╗ ████║██╔══██╗██╔══██╗██╔══██╗╚══██╔══╝    ╚══██╔══╝██╔════╝██╔══██╗
+    ██║██╔████╔██║██████╔╝███████║██████╔╝   ██║          ██║   ██║     ██████╔╝
+    ██║██║╚██╔╝██║██╔═══╝ ██╔══██║██╔══██╗   ██║          ██║   ██║     ██╔═══╝
+    ██║██║ ╚═╝ ██║██║     ██║  ██║██║  ██║   ██║          ██║   ╚██████╗██║
+    ╚═╝╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝          ╚═╝    ╚═════╝╚═╝
 EOF
     echo -e "${NC}"
-    echo -e "  ${YELLOW}${BOLD}🔥 火山帮 TCP 调优 V2.0${NC}  ${DIM}SSH Hardening · BBR · FQ · SYSCTL${NC}"
-    echo -e "  ${CYAN}$(printf '━%.0s' $(seq 1 66))${NC}"
+    echo -e "  ${YELLOW}${BOLD}银趴火山帮 鸡儿硬邦邦${NC}  ${DIM}BBR · FQ · SYSCTL · SSH HARDENING${NC}"
+    echo -e "  ${CYAN}$(printf '━%.0s' $(seq 1 82))${NC}"
 }
 
 # 统一标题栏
 print_header() {
-    clear
+    safe_clear
     echo ""
     box_top
     box_title "🔥 火山帮 TCP 调优 V2.0"
@@ -605,7 +612,7 @@ set_login_mode() {
             apply_and_restart && info "已切换：仅密码登录 ✓"
             ;;
         0) return ;;
-        00) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
+        00) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
         *) return ;;
     esac
 }
@@ -933,7 +940,7 @@ f2b_config_params() {
             esac
             ;;
         0) return ;;
-        00) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
+        00) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
         *) warn "无效选项"; return ;;
     esac
 
@@ -1051,7 +1058,7 @@ JAILEOF
             fi
             ;;
         0) return ;;
-        00) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
+        00) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
         *) warn "无效选项" ;;
     esac
 }
@@ -1097,7 +1104,7 @@ fail2ban_menu() {
             case "$CHOICE" in
                 1) f2b_install; echo ""; read -rp "  按 Enter 继续..." _ ;;
                 0) return ;;
-                00) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
+                00) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
                 *) warn "无效选项"; sleep 1 ;;
             esac
             continue
@@ -1119,9 +1126,7 @@ fail2ban_menu() {
             BANNED_COUNT="-"; TOTAL_FAIL="-"
         fi
 
-        clear
-        echo ""
-        volcano_art_banner
+        safe_clear
         echo ""
         box_top
         box_title "🔥 火山帮 TCP 调优 V2.0"
@@ -1195,7 +1200,7 @@ fail2ban_menu() {
                 sleep 1; continue
                 ;;
             0) return ;;
-            00) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
+            00) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
             *) warn "无效选项"; sleep 1; continue ;;
         esac
 
@@ -1385,7 +1390,7 @@ bbr_restore_sysctl() {
     read -rp "  请选择: " CH
     case "$CH" in
         0) return ;;
-        00) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
+        00) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
         d|D)
             read -rp "  确认清除全部 ${#BACKUPS[@]} 个备份？(Y/n，默认Y): " C
             [ "$C" = "yes" ] && rm -f "${SYSCTL_FILE}.bak."* && info "已清除全部备份" || warn "已取消"
@@ -1596,7 +1601,7 @@ bbr_menu_bandwidth() {
         3) bbr_auto_calc "$MEM_MB" "$LAT_MS" 1024 "$MEM_LBL" "$LAT_LBL" "1Gbps" ;;
         4) bbr_auto_calc "$MEM_MB" "$LAT_MS" 2048 "$MEM_LBL" "$LAT_LBL" "2Gbps" ;;
         0) return ;;
-        00) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
+        00) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
         *) warn "无效选项" ;;
     esac
 }
@@ -1619,7 +1624,7 @@ bbr_menu_latency() {
         2) bbr_menu_bandwidth "$MEM_MB" 150 "$MEM_LBL" "100-200ms" ;;
         3) bbr_menu_bandwidth "$MEM_MB" 250 "$MEM_LBL" "200ms以上" ;;
         0) return ;;
-        00) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
+        00) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
         *) warn "无效选项" ;;
     esac
 }
@@ -1639,7 +1644,7 @@ bbr_menu_auto() {
         2) bbr_menu_latency 1024 "1GB" ;;
         3) bbr_menu_latency 2048 "2GB" ;;
         0) return ;;
-        00) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
+        00) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
         *) warn "无效选项" ;;
     esac
 }
@@ -1680,7 +1685,7 @@ bbr_menu_manual() {
         5) RMEM=67108864;  WMEM=67108864;  ADV_WIN=3; NOTSENT=524288; TCP_RMEM_DEFAULT=1048576; BUF_LBL=64 ;;
         6) RMEM=134217728; WMEM=134217728; ADV_WIN=3; NOTSENT=524288; TCP_RMEM_DEFAULT=1048576; BUF_LBL=128 ;;
         0) return ;;
-        00) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
+        00) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
         *) warn "无效选项"; return ;;
     esac
 
@@ -1734,7 +1739,7 @@ bbr_menu_tc() {
             ;;
         7) RATE=0 ;;
         0) return ;;
-        00) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
+        00) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
         *) warn "无效选项"; return ;;
     esac
 
@@ -1808,7 +1813,7 @@ bbr_menu_initcwnd() {
             fi
             ;;
         0) return ;;
-        00) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
+        00) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
         *) warn "无效选项"; return ;;
     esac
 
@@ -1878,7 +1883,7 @@ bbr_smart_wizard() {
             fi
             ;;
         0) return ;;
-        00) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
+        00) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
         *) warn "无效选项"; return ;;
     esac
 
@@ -1919,7 +1924,7 @@ bbr_menu() {
             6) bbr_backup_sysctl ;;
             7) bbr_restore_sysctl ;;
             0) return ;;
-            00) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
+            00) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
             *) warn "无效选项"; sleep 1; continue ;;
         esac
 
@@ -2186,7 +2191,7 @@ ufw_menu() {
                 fi
                 ;;
             0) return ;;
-            00) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
+            00) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
             *) warn "无效选项"; sleep 1; continue ;;
         esac
 
@@ -2383,7 +2388,7 @@ fwd_menu() {
                 fi
                 ;;
             0) return ;;
-            00) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
+            00) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
             *) warn "无效选项"; sleep 1; continue ;;
         esac
 
@@ -2415,7 +2420,7 @@ firewall_menu() {
                 1) fw_install "ufw";       echo ""; read -rp "  按 Enter 继续..." _ ;;
                 2) fw_install "firewalld"; echo ""; read -rp "  按 Enter 继续..." _ ;;
                 0) return ;;
-                00) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
+                00) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
                 *) warn "无效选项"; sleep 1 ;;
             esac
             continue
@@ -2467,7 +2472,7 @@ ssh_tools_menu() {
             5) set_login_mode ;;
             6) change_port ;;
             0) return ;;
-            00) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
+            00) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
             *) warn "无效选项"; sleep 1; NEED_PAUSE=0 ;;
         esac
 
@@ -2603,7 +2608,7 @@ dns_menu() {
                 info "DNS 配置已保存"
                 ;;
             0) return ;;
-            00) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
+            00) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
             *) warn "无效选项"; sleep 1; continue ;;
         esac
 
@@ -2703,7 +2708,7 @@ mirror_menu() {
                     4) mirror_apply_ubuntu "https://mirrors.ustc.edu.cn/ubuntu" ;;
                     5) mirror_apply_ubuntu "http://archive.ubuntu.com/ubuntu" ;;
                     0) return ;;
-                    00) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
+                    00) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
                     *) warn "无效选项"; sleep 1; continue ;;
                 esac
                 ;;
@@ -2726,7 +2731,7 @@ mirror_menu() {
                     4) mirror_apply_debian "https://mirrors.ustc.edu.cn/debian" ;;
                     5) mirror_apply_debian "http://deb.debian.org/debian" ;;
                     0) return ;;
-                    00) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
+                    00) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
                     *) warn "无效选项"; sleep 1; continue ;;
                 esac
                 ;;
@@ -2745,7 +2750,7 @@ mirror_menu() {
                     2) mirror_apply_centos "edu" ;;
                     3) mirror_apply_centos "intl" ;;
                     0) return ;;
-                    00) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
+                    00) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
                     *) warn "无效选项"; sleep 1; continue ;;
                 esac
                 ;;
@@ -2946,7 +2951,7 @@ ip_config_menu() {
             3) ip_disable_v6 ;;
             4) ip_enable_v6 ;;
             0) return ;;
-            00) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
+            00) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
             *) warn "无效选项"; sleep 1; continue ;;
         esac
 
@@ -3497,7 +3502,7 @@ caddy_menu() {
             case "$CH" in
                 1) caddy_install; echo ""; read -rp "  按 Enter 继续..." _ ;;
                 0) return ;;
-                00) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
+                00) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
                 *) warn "无效选项"; sleep 1 ;;
             esac
             continue
@@ -3560,7 +3565,7 @@ caddy_menu() {
                 ;;
             d|D) caddy_uninstall ;;
             0) return ;;
-            00) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
+            00) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
             *) warn "无效选项"; sleep 1; continue ;;
         esac
 
@@ -3793,7 +3798,7 @@ portfwd_menu() {
             case "$CH" in
                 1) pkg_install iptables && info "iptables 安装成功 ✓" || error "安装失败" ;;
                 0) return ;;
-                00) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
+                00) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
             esac
             echo ""; read -rp "  按 Enter 继续..." _
             continue
@@ -3830,7 +3835,7 @@ portfwd_menu() {
             2) pf_del ;;
             3) pf_flush ;;
             0) return ;;
-            00) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
+            00) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
             *) warn "无效选项"; sleep 1; continue ;;
         esac
 
@@ -3886,7 +3891,7 @@ timesync_menu() {
             4) ts_set_custom_tz ;;
             5) ts_enable_ntp ;;
             0) return ;;
-            00) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
+            00) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
             *) warn "无效选项"; sleep 1; continue ;;
         esac
 
@@ -4146,7 +4151,7 @@ swap_create() {
             fi
             ;;
         0) return ;;
-        00) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
+        00) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
         *) warn "无效选项"; return ;;
     esac
 
@@ -4282,7 +4287,7 @@ swap_set_swappiness() {
             fi
             ;;
         0) return ;;
-        00) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
+        00) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
         *) warn "无效选项"; return ;;
     esac
 
@@ -4320,7 +4325,7 @@ swap_menu() {
             2) swap_delete ;;
             3) swap_set_swappiness ;;
             0) return ;;
-            00) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
+            00) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
             *) warn "无效选项"; sleep 1; continue ;;
         esac
 
@@ -4346,6 +4351,7 @@ show_help() {
 用法：
   bash SSH-Hardening.sh                 进入交互菜单
   bash SSH-Hardening.sh --status        查看 SSH/BBR/tc 状态
+  bash SSH-Hardening.sh --doctor        运行环境体检与建议
   bash SSH-Hardening.sh --tcp balanced  应用均衡 TCP 调优
   bash SSH-Hardening.sh --tcp latency   应用低延迟 TCP 调优
   bash SSH-Hardening.sh --tcp throughput 应用高吞吐 TCP 调优
@@ -4364,6 +4370,41 @@ quick_status() {
     echo ""
     echo -e "  内核：${BOLD}$(uname -r)${NC}"
     echo -e "  系统：${BOLD}$(. /etc/os-release 2>/dev/null; echo ${PRETTY_NAME:-unknown})${NC}"
+}
+
+volcano_tcp_doctor() {
+    print_header "🧪 火山帮 TCP Doctor"
+    local DEV KERNEL CC QDISC MEM_MB BBR_MOD
+    DEV=$(ip route | awk '/^default/{print $5; exit}')
+    KERNEL=$(uname -r 2>/dev/null || echo unknown)
+    CC=$(sysctl -n net.ipv4.tcp_congestion_control 2>/dev/null || echo unknown)
+    QDISC=$(sysctl -n net.core.default_qdisc 2>/dev/null || echo unknown)
+    MEM_MB=$(( $(grep MemTotal /proc/meminfo 2>/dev/null | awk '{print $2}' || echo 0) / 1024 ))
+    BBR_MOD=$(lsmod 2>/dev/null | awk '/tcp_bbr/{print "loaded"; found=1} END{if(!found) print "unknown"}')
+
+    echo -e "  网卡：${BOLD}${DEV:-unknown}${NC}"
+    echo -e "  内核：${BOLD}${KERNEL}${NC}"
+    echo -e "  内存：${BOLD}${MEM_MB}MB${NC}"
+    echo -e "  拥塞控制：${BOLD}${CC}${NC}"
+    echo -e "  默认队列：${BOLD}${QDISC}${NC}"
+    echo -e "  BBR 模块：${BOLD}${BBR_MOD}${NC}"
+    echo ""
+    echo -e "  ${CYAN}建议：${NC}"
+    if [ "$CC" != "bbr" ]; then
+        warn "当前未启用 bbr，可进入 TCP 调优 → 火山帮智能向导启用"
+    else
+        info "BBR 已启用"
+    fi
+    if [ "$QDISC" != "fq" ]; then
+        warn "当前默认队列不是 fq，BBR 通常建议配合 fq"
+    else
+        info "fq 队列已启用"
+    fi
+    if [ "$MEM_MB" -gt 0 ] && [ "$MEM_MB" -lt 768 ]; then
+        warn "小内存机器建议优先使用 latency 低延迟/轻量预设"
+    else
+        info "可优先使用 balanced 均衡预设；大带宽再考虑 throughput"
+    fi
 }
 
 volcano_tcp_profile() {
@@ -4395,6 +4436,7 @@ handle_cli_args() {
     case "${1:-}" in
         -h|--help|help) show_help; exit 0 ;;
         --status|status) quick_status; exit 0 ;;
+        --doctor|doctor) volcano_tcp_doctor; exit 0 ;;
         --install|install) need_root; self_install; exit 0 ;;
         --update|update) need_root; self_update; exit 0 ;;
         --uninstall|uninstall) need_root; self_uninstall; exit 0 ;;
@@ -4555,7 +4597,7 @@ self_check_first_run() {
     [ -f /usr/local/bin/v ] && return
     [ -f "$LOCAL_SCRIPT" ] && return
 
-    clear
+    safe_clear
     echo ""
     box_top
     box_title "🔥 火山帮 TCP 调优 V2.0"
@@ -4620,7 +4662,7 @@ self_manage_menu() {
             2) self_update ;;
             3) self_uninstall ;;
             0) return ;;
-            00) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
+            00) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
             *) warn "无效选项"; sleep 1; continue ;;
         esac
 
@@ -4641,7 +4683,9 @@ main_menu() {
         KEYCOUNT=$(grep -cE '^(ssh-rsa|ssh-ed25519|ecdsa-sha2|sk-ssh|ssh-dss) ' "$AUTH_KEYS" 2>/dev/null || echo 0)
         local F2B_STAT; F2B_STAT=$(f2b_status)
 
-        clear
+        safe_clear
+        echo ""
+        volcano_art_banner
         echo ""
         box_top
         box_title "🔥 火山帮 TCP 调优 V2.0"
@@ -4714,7 +4758,7 @@ main_menu() {
             t|T) timesync_menu ;;
             s|S) swap_menu ;;
             m|M) self_manage_menu ;;
-            0) clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
+            0) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
             *) warn "无效选项，请重新输入。"; sleep 1 ;;
         esac
         # 子菜单返回后直接刷新主菜单，不需要按 Enter

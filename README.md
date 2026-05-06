@@ -1,12 +1,12 @@
-# 🔥 火山帮 TCP 调优工具
+# 🔥 IMPART TCP
 
 基于 [`chnnic/SSH-Hardening`](https://github.com/chnnic/SSH-Hardening) fork 增强，定位为 VPS 初始化、SSH 加固、Fail2ban、防火墙与 BBR/TCP 调优的一体化脚本。
 
-> 当前增强版：V2.0 · 火山帮 TCP 调优工具
+> 当前增强版：V2.0 · IMPART TCP · 银趴火山帮 鸡儿硬邦邦
 
 ## ✨ 本次增强方向
 
-- 🎨 **整体界面美化**：主标题、菜单、帮助信息与主页面艺术字统一升级为“火山帮 TCP 调优”风格。
+- 🎨 **整体界面美化**：主标题、菜单、帮助信息与主页面艺术字统一升级为 `IMPART TCP`，副标语为“银趴火山帮 鸡儿硬邦邦”。
 - 🧭 **操作逻辑优化**：保留交互式菜单，同时新增命令行参数与智能向导，适合一键执行和自动化调用。
 - 🚀 **运行方式优化**：支持 `--status`、`--tcp`、`--install`、`--update`、`--uninstall` 等非交互模式。
 - 📦 **安装 / 卸载优化**：默认安装到 `/usr/local/bin/volcano-tcp`，并创建 `v` / `V` / `vtcp` 快捷命令。
@@ -30,6 +30,12 @@ bash SSH-Hardening.sh --help
 
 ```bash
 bash SSH-Hardening.sh --status
+```
+
+### 运行环境体检
+
+```bash
+bash SSH-Hardening.sh --doctor
 ```
 
 ### 一键 TCP 调优
@@ -80,7 +86,7 @@ volcano-tcp --uninstall
 
 - SSH 工具集
 - Fail2ban 管理
-- BBR TCP 调优
+- BBR TCP 调优 / 智能向导 / TCP Doctor
 - 防火墙管理
 - DNS 优化
 - 系统换源
