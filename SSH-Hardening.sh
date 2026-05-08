@@ -1387,7 +1387,7 @@ bbr_backup_sysctl() {
 
 # ── 还原 sysctl ───────────────────────────────────────────
 bbr_restore_sysctl() {
-    print_header "还原 IMPART OPS PRO sysctl 配置"
+    print_header "还原 IMPART OPS sysctl 配置"
     local BACKUPS=()
     local BACKUPS=()
     while IFS= read -r _bline; do BACKUPS+=("$_bline"); done < <(ls -t "${SYSCTL_FILE}.bak."* 2>/dev/null)
