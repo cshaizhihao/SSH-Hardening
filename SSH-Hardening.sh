@@ -1,16 +1,16 @@
 #!/bin/bash
 
 # ============================================================
-#  火山帮 TCP 调优工具 V2.0 — SSH 安全 / BBR / 网络加速
-#  功能：SSH管理 / Fail2ban / BBR TCP 调优
+#  IMPART OPS PRO V3.0.0 — VPS 开荒 / 加固 / 网络优化
+#  功能：SSH管理 / Fail2ban / firewall / BBR TCP / DDNS / Caddy
 # ============================================================
 
-APP_NAME="IMPART TCP"
-APP_VERSION="V2.0"
-APP_TITLE="🔥 火山帮 TCP 调优 ${APP_VERSION}"
-APP_SUBTITLE="⚡ SSH · BBR · TCP · Firewall"
+APP_NAME="IMPART OPS PRO"
+APP_VERSION="V3.0.0"
+APP_TITLE="🔥 IMPART OPS PRO ${APP_VERSION}"
+APP_SUBTITLE="VPS 开荒 · 加固 · 网络优化 · DDNS"
 APP_SLOGAN="银趴火山帮 鸡儿硬邦邦"
-APP_STACK="BBR · FQ · SYSCTL · SSH HARDENING"
+APP_STACK="SSH · BBR · DDNS · CADDY · FIREWALL"
 APP_REPO="cshaizhihao/SSH-Hardening"
 SCRIPT_URL="https://raw.githubusercontent.com/${APP_REPO}/refs/heads/main/SSH-Hardening.sh"
 LOCAL_SCRIPT="/usr/local/bin/volcano-tcp"
@@ -83,19 +83,27 @@ safe_clear() {
     fi
 }
 
-# 火山帮主视觉 Banner：只在主菜单展示，避免子菜单刷屏
+# 主视觉 Banner：只在主菜单展示，避免子菜单刷屏
 volcano_art_banner() {
     echo -e "${RED}${BOLD}"
     cat << 'EOF'
-    ██╗███╗   ███╗██████╗  █████╗ ██████╗ ████████╗    ████████╗ ██████╗██████╗
-    ██║████╗ ████║██╔══██╗██╔══██╗██╔══██╗╚══██╔══╝    ╚══██╔══╝██╔════╝██╔══██╗
-    ██║██╔████╔██║██████╔╝███████║██████╔╝   ██║          ██║   ██║     ██████╔╝
-    ██║██║╚██╔╝██║██╔═══╝ ██╔══██║██╔══██╗   ██║          ██║   ██║     ██╔═══╝
-    ██║██║ ╚═╝ ██║██║     ██║  ██║██║  ██║   ██║          ██║   ╚██████╗██║
-    ╚═╝╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝          ╚═╝    ╚═════╝╚═╝
+ ██╗███╗   ███╗██████╗  █████╗ ██████╗ ████████╗     ██████╗ ██████╗ ███████╗
+ ██║████╗ ████║██╔══██╗██╔══██╗██╔══██╗╚══██╔══╝    ██╔═══██╗██╔══██╗██╔════╝
+ ██║██╔████╔██║██████╔╝███████║██████╔╝   ██║       ██║   ██║██████╔╝███████╗
+ ██║██║╚██╔╝██║██╔═══╝ ██╔══██║██╔══██╗   ██║       ██║   ██║██╔═══╝ ╚════██║
+ ██║██║ ╚═╝ ██║██║     ██║  ██║██║  ██║   ██║       ╚██████╔╝██║     ███████║
+ ╚═╝╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝        ╚═════╝ ╚═╝     ╚══════╝
+
+                        ██████╗ ██████╗  ██████╗
+                        ██╔══██╗██╔══██╗██╔═══██╗
+                        ██████╔╝██████╔╝██║   ██║
+                        ██╔═══╝ ██╔══██╗██║   ██║
+                        ██║     ██║  ██║╚██████╔╝
+                        ╚═╝     ╚═╝  ╚═╝ ╚═════╝
 EOF
     echo -e "${NC}"
-    echo -e "  ${YELLOW}${BOLD}${APP_SLOGAN}${NC}  ${DIM}${APP_STACK}${NC}"
+    echo -e "  ${YELLOW}${BOLD}${APP_SLOGAN}${NC}"
+    echo -e "  ${DIM}${APP_STACK}${NC}"
     echo -e "  ${CYAN}$(printf '━%.0s' $(seq 1 82))${NC}"
 }
 
@@ -1391,7 +1399,7 @@ bbr_backup_sysctl() {
 
 # ── 还原 sysctl ───────────────────────────────────────────
 bbr_restore_sysctl() {
-    print_header "还原 IMPART TCP sysctl 配置"
+    print_header "还原 IMPART OPS PRO sysctl 配置"
     local BACKUPS=()
     local BACKUPS=()
     while IFS= read -r _bline; do BACKUPS+=("$_bline"); done < <(ls -t "${SYSCTL_FILE}.bak."* 2>/dev/null)
@@ -4408,7 +4416,10 @@ ${APP_SLOGAN}
   bash SSH-Hardening.sh --uninstall     卸载脚本和快捷命令
   bash SSH-Hardening.sh --help          显示帮助
 
-说明：--tcp 会写入 ${SYSCTL_FILE}，执行前自动备份旧配置；不安装任何额外软件。
+说明：
+  - --tcp 会写入 ${SYSCTL_FILE}，执行前自动备份旧配置
+  - 交互菜单适合首次开荒；CLI 参数适合快速巡检与重复执行
+  - 如用于 NAT / 家宽 / 动态公网场景，建议配合 Cloudflare DDNS
 EOF
 }
 
@@ -5413,19 +5424,22 @@ main_menu() {
             box_line "  🔔 新版本 ${UPDATE_NOTICE} 可用！(m→2 更新)" "  ${YELLOW}${BOLD}🔔 新版本 ${UPDATE_NOTICE} 可用！${NC}  ${DIM}m→2 一键更新${NC}"
         fi
         box_sep
+        box_line "  [安全与网络]"      "  ${CYAN}${BOLD}[安全与网络]${NC}"
         box_line "  1) SSH 工具集"   "  ${GREEN}1${NC}) SSH 工具集"
         box_line "  2) Fail2ban 管理" "  ${GREEN}2${NC}) Fail2ban 管理"
-        box_line "  3) BBR TCP 调优" "  ${GREEN}3${NC}) BBR TCP 调优"
+        box_line "  3) BBR TCP 调优" "  ${GREEN}3${NC}) BBR tcp 调优"
         box_line "  4) 防火墙管理"   "  ${GREEN}4${NC}) 防火墙管理"
         box_line "  5) DNS 优化"     "  ${GREEN}5${NC}) DNS 优化"
+        box_line "  d) DDNS"         "  ${GREEN}d${NC}) Cloudflare DDNS"
+        box_line "" ""
+        box_line "  [系统与服务]"      "  ${CYAN}${BOLD}[系统与服务]${NC}"
         box_line "  6) 系统换源"     "  ${GREEN}6${NC}) 系统换源"
         box_line "  7) IPv4/IPv6 配置" "  ${GREEN}7${NC}) IPv4/IPv6 配置"
         box_line "  8) Caddy 管理"    "  ${GREEN}8${NC}) Caddy 管理"
         box_line "  9) 端口转发"     "  ${GREEN}9${NC}) 端口转发"
         box_line "  t) 时间同步"     "  ${GREEN}t${NC}) 时间同步"
         box_line "  s) Swap 管理"    "  ${GREEN}s${NC}) Swap 管理"
-        box_line "  m) 脚本管理"     "  ${GREEN}m${NC}) 脚本管理（安装/更新）"
-        box_line "  d) DDNS"         "  ${GREEN}d${NC}) Cloudflare DDNS"
+        box_line "  m) 脚本管理"     "  ${GREEN}m${NC}) 脚本管理（安装 / 更新 / 卸载）"
         box_line "  0) 退出"         "  ${RED}0${NC}) 退出"
         box_bot
         echo ""
