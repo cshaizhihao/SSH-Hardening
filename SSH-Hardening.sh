@@ -5425,25 +5425,25 @@ main_menu() {
         fi
         box_sep
         box_line "  [安全与网络]"      "  ${CYAN}${BOLD}[安全与网络]${NC}"
-        box_line "  1) SSH 工具集"   "  ${GREEN}1${NC}) SSH 工具集"
-        box_line "  2) Fail2ban 管理" "  ${GREEN}2${NC}) Fail2ban 管理"
-        box_line "  3) BBR TCP 调优" "  ${GREEN}3${NC}) BBR tcp 调优"
-        box_line "  4) 防火墙管理"   "  ${GREEN}4${NC}) 防火墙管理"
-        box_line "  5) DNS 优化"     "  ${GREEN}5${NC}) DNS 优化"
-        box_line "  d) DDNS"         "  ${GREEN}d${NC}) Cloudflare DDNS"
+        box_line "  1) SSH 工具集"    "  ${GREEN}1${NC}) SSH 工具集"
+        box_line "  2) Fail2ban 管理"  "  ${GREEN}2${NC}) Fail2ban 管理"
+        box_line "  3) BBR TCP 调优"  "  ${GREEN}3${NC}) BBR tcp 调优"
+        box_line "  4) 防火墙管理"    "  ${GREEN}4${NC}) 防火墙管理"
+        box_line "  5) DNS 优化"      "  ${GREEN}5${NC}) DNS 优化"
+        box_line "  6) Cloudflare DDNS" "  ${GREEN}6${NC}) Cloudflare DDNS"
         box_line "" ""
         box_line "  [系统与服务]"      "  ${CYAN}${BOLD}[系统与服务]${NC}"
-        box_line "  6) 系统换源"     "  ${GREEN}6${NC}) 系统换源"
-        box_line "  7) IPv4/IPv6 配置" "  ${GREEN}7${NC}) IPv4/IPv6 配置"
-        box_line "  8) Caddy 管理"    "  ${GREEN}8${NC}) Caddy 管理"
-        box_line "  9) 端口转发"     "  ${GREEN}9${NC}) 端口转发"
-        box_line "  t) 时间同步"     "  ${GREEN}t${NC}) 时间同步"
-        box_line "  s) Swap 管理"    "  ${GREEN}s${NC}) Swap 管理"
-        box_line "  m) 脚本管理"     "  ${GREEN}m${NC}) 脚本管理（安装 / 更新 / 卸载）"
-        box_line "  0) 退出"         "  ${RED}0${NC}) 退出"
+        box_line "  7) 系统换源"      "  ${GREEN}7${NC}) 系统换源"
+        box_line "  8) IPv4/IPv6 配置" "  ${GREEN}8${NC}) IPv4/IPv6 配置"
+        box_line "  9) Caddy 管理"     "  ${GREEN}9${NC}) Caddy 管理"
+        box_line "  p) 端口转发"      "  ${GREEN}p${NC}) 端口转发"
+        box_line "  t) 时间同步"      "  ${GREEN}t${NC}) 时间同步"
+        box_line "  s) Swap 管理"     "  ${GREEN}s${NC}) Swap 管理"
+        box_line "  m) 脚本管理"      "  ${GREEN}m${NC}) 脚本管理（安装 / 更新 / 卸载）"
+        box_line "  0) 退出"          "  ${RED}0${NC}) 退出"
         box_bot
         echo ""
-        read -rp "  请选择功能 [0-9/t/s/m/d]: " CHOICE
+        read -rp "  请选择功能 [0-9/p/t/s/m]: " CHOICE
 
         case "$CHOICE" in
             1) ssh_tools_menu ;;
@@ -5451,14 +5451,14 @@ main_menu() {
             3) bbr_menu ;;
             4) firewall_menu ;;
             5) dns_menu ;;
-            6) mirror_menu ;;
-            7) ip_config_menu ;;
-            8) caddy_menu ;;
-            9) portfwd_menu ;;
+            6) ddns_menu ;;
+            7) mirror_menu ;;
+            8) ip_config_menu ;;
+            9) caddy_menu ;;
+            p|P) portfwd_menu ;;
             t|T) timesync_menu ;;
             s|S) swap_menu ;;
             m|M) self_manage_menu ;;
-            d|D) ddns_menu ;;
             0) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
             *) warn "无效选项，请重新输入。"; sleep 1 ;;
         esac
