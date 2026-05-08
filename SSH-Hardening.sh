@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # ============================================================
-#  IMPART OPS PRO V3.0.0 — VPS 开荒 / 加固 / 网络优化
+#  IMPART OPS V3.0.0 — VPS 开荒 / 加固 / 网络优化
 #  功能：SSH管理 / Fail2ban / firewall / BBR TCP / DDNS / Caddy
 # ============================================================
 
-APP_NAME="IMPART OPS PRO"
+APP_NAME="IMPART OPS"
 APP_VERSION="V3.0.0"
-APP_TITLE="🔥 IMPART OPS PRO ${APP_VERSION}"
+APP_TITLE="🔥 IMPART OPS ${APP_VERSION}"
 APP_SUBTITLE="VPS 开荒 · 加固 · 网络优化 · DDNS"
 APP_SLOGAN="银趴火山帮 鸡儿硬邦邦"
 APP_STACK="SSH · BBR · DDNS · CADDY · FIREWALL"
@@ -88,11 +88,6 @@ volcano_art_banner() {
     echo -e "${RED}${BOLD}"
     cat << 'EOF'
 ██╗███╗   ███╗██████╗  █████╗ ██████╗ ████████╗     ██████╗ ██████╗ ███████╗
-██║████╗ ████║██╔══██╗██╔══██╗██╔══██╗╚══██╔══╝    ██╔═══██╗██╔══██╗██╔════╝
-██║██╔████╔██║██████╔╝███████║██████╔╝   ██║       ██║   ██║██████╔╝███████╗
-██║██║╚██╔╝██║██╔═══╝ ██╔══██║██╔══██╗   ██║       ██║   ██║██╔═══╝ ╚════██║
-██║██║ ╚═╝ ██║██║     ██║  ██║██║  ██║   ██║       ╚██████╔╝██║     ███████║
-╚═╝╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝        ╚═════╝ ╚═╝     ╚══════╝
 EOF
     echo -e "${NC}"
     echo -e "  ${YELLOW}${BOLD}${APP_SLOGAN}${NC}"

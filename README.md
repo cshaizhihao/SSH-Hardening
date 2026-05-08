@@ -1,8 +1,8 @@
-# 🔥 IMPART OPS PRO
+# 🔥 IMPART OPS
 
 > 银趴火山帮 鸡儿硬邦邦
 
-**IMPART OPS PRO V3.0.0** 是一个面向 VPS 场景的开荒、加固、网络优化与基础运维脚本。  
+**IMPART OPS V3.0.0** 是一个面向 VPS 场景的开荒、加固、网络优化与基础运维脚本。  
 项目基于上游 [`chnnic/SSH-Hardening`](https://github.com/chnnic/SSH-Hardening) 深度增强，现已从单一 tcp 调优工具升级为更完整的 **VPS 初始化工具箱**。
 
 适用场景：
@@ -17,7 +17,7 @@
 
 ## 版本信息
 
-- **产品名：** IMPART OPS PRO
+- **产品名：** IMPART OPS
 - **当前版本：** V3.0.0
 - **仓库地址：** <https://github.com/cshaizhihao/SSH-Hardening>
 - **上游项目：** <https://github.com/chnnic/SSH-Hardening>
@@ -59,7 +59,7 @@
 - 端口转发
 
 ### 5. 使用体验增强
-- 主菜单品牌化艺术字
+- 主菜单品牌化标题
 - 交互式菜单 + CLI 参数双模式
 - TCP Doctor / 状态速览
 - 更适合发行与长期维护的 README 与版本化命名
@@ -223,7 +223,7 @@ volcano-tcp --tcp throughput
 
 V3.0.0 是一次定位升级版本，核心变化如下：
 
-- 品牌名升级为 **IMPART OPS PRO**
+- 品牌名升级为 **IMPART OPS**
 - 从单一 tcp 调优脚本升级为更完整的 **VPS 开荒脚本**
 - Cloudflare DDNS 模块完成整合
 - NAT 场景兼容性进一步增强
