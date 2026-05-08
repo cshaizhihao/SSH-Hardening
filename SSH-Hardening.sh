@@ -4793,6 +4793,26 @@ DDNS_INNER
     echo -e "  日志 : ${DIM}${DDNS_LOG}${NC}"
 }
 
+# ── 暂停/恢复 DDNS ───────────────────────────────────────
+ddns_pause() {
+    if [ ! -f "$DDNS_SCRIPT" ]; then
+        error "DDNS 未安装"; return
+    fi
+    ( crontab -l 2>/dev/null | grep -v "ddns.sh" ) | crontab - 2>/dev/null
+    info "DDNS 自动更新已暂停 ✓"
+}
+
+ddns_resume() {
+    if [ ! -f "$DDNS_SCRIPT" ]; then
+        error "DDNS 未安装"; return
+    fi
+    local LOG="$DDNS_LOG"
+    [ ! -f "$LOG" ] && LOG="$HOME/ddns.log"
+    local CRON_JOB="*/5 * * * * ${DDNS_SCRIPT} >> ${LOG} 2>&1"
+    ( crontab -l 2>/dev/null | grep -v "ddns.sh"; echo "$CRON_JOB" ) | crontab -
+    info "DDNS 自动更新已恢复 ✓"
+}
+
 # ── 卸载 DDNS ─────────────────────────────────────────────
 ddns_uninstall() {
     print_header "卸载 DDNS"
@@ -4945,7 +4965,12 @@ ddns_menu() {
             echo -e "  ${GREEN}1${NC}) 手动立即更新"
             echo -e "  ${GREEN}2${NC}) 查看日志"
             echo -e "  ${GREEN}3${NC}) 修改配置（更换域名/Token）"
-            echo -e "  ${YELLOW}4${NC}) 卸载 DDNS"
+            if [ "$D_ST" = "running" ]; then
+                echo -e "  ${YELLOW}4${NC}) 暂停自动更新"
+            else
+                echo -e "  ${GREEN}4${NC}) 恢复自动更新"
+            fi
+            echo -e "  ${YELLOW}5${NC}) 卸载 DDNS"
             echo -e "  ${RED}0${NC}) 返回"
             echo -e "  ${RED}00${NC}) 退出脚本"
         fi
@@ -4965,7 +4990,8 @@ ddns_menu() {
                 1) ddns_run_now ;;
                 2) ddns_view_logs ;;
                 3) ddns_reconfig ;;
-                4) ddns_uninstall ;;
+                4) [ "$D_ST" = "running" ] && ddns_pause || ddns_resume ;;
+                5) ddns_uninstall ;;
                 0) return ;;
                 00) safe_clear; echo -e "${GREEN}已退出。${NC}"; exit 0 ;;
                 *) warn "无效选项"; sleep 1; continue ;;
