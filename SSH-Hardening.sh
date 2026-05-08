@@ -85,12 +85,10 @@ safe_clear() {
 
 # 主视觉 Banner：只在主菜单展示，避免子菜单刷屏
 volcano_art_banner() {
-    echo -e "${RED}${BOLD}"
-    echo "𝙄𝙈𝙋𝘼𝙍𝙏 𝙊𝙋𝙎"
-    echo -e "${NC}"
+    echo -e "${RED}${BOLD}█▓▒ IMPART OPS ▒▓█${NC}"
     echo -e "  ${YELLOW}${BOLD}${APP_SLOGAN}${NC}"
     echo -e "  ${DIM}${APP_STACK}${NC}"
-    echo -e "  ${CYAN}$(printf '━%.0s' $(seq 1 52))${NC}"
+    echo -e "  ${CYAN}$(printf '━%.0s' $(seq 1 44))${NC}"
 }
 
 # 统一标题栏
