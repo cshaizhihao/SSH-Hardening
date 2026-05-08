@@ -4418,10 +4418,13 @@ quick_status() {
     echo ""
     echo -e "  内核：${BOLD}$(uname -r)${NC}"
     echo -e "  系统：${BOLD}$(. /etc/os-release 2>/dev/null; echo ${PRETTY_NAME:-unknown})${NC}"
-    echo -e "  DDNS：${BOLD}$(ddns_status)${NC}"
-    if [ -f "$DDNS_ZONE_FILE" ]; then
-        echo -e "  DDNS 域名：${BOLD}$(grep '^DOMAIN=' "$DDNS_ZONE_FILE" | cut -d= -f2)${NC}"
-    fi
+    local D_ST D_DOMAIN D_MODE
+    D_ST=$(ddns_status)
+    D_DOMAIN=$(ddns_cfg_get DOMAIN)
+    D_MODE=$(ddns_cfg_get MODE)
+    echo -e "  DDNS：${BOLD}${D_ST}${NC}"
+    [ -n "$D_DOMAIN" ] && echo -e "  DDNS 域名：${BOLD}${D_DOMAIN}${NC}"
+    [ -n "$D_MODE" ] && echo -e "  DDNS 模式：${BOLD}$([ "$D_MODE" = "dual" ] && echo 'IPv4 + IPv6' || echo '仅 IPv4')${NC}"
 }
 
 volcano_tcp_profiles() {
@@ -4446,13 +4449,15 @@ EOF
 
 volcano_tcp_doctor() {
     print_header "🧪 火山帮 TCP Doctor"
-    local DEV KERNEL CC QDISC MEM_MB BBR_MOD
+    local DEV KERNEL CC QDISC MEM_MB BBR_MOD DDNS_ST DDNS_MODE
     DEV=$(ip route | awk '/^default/{print $5; exit}')
     KERNEL=$(uname -r 2>/dev/null || echo unknown)
     CC=$(sysctl -n net.ipv4.tcp_congestion_control 2>/dev/null || echo unknown)
     QDISC=$(sysctl -n net.core.default_qdisc 2>/dev/null || echo unknown)
     MEM_MB=$(( $(grep MemTotal /proc/meminfo 2>/dev/null | awk '{print $2}' || echo 0) / 1024 ))
     BBR_MOD=$(lsmod 2>/dev/null | awk '/tcp_bbr/{print "loaded"; found=1} END{if(!found) print "unknown"}')
+    DDNS_ST=$(ddns_status)
+    DDNS_MODE=$(ddns_cfg_get MODE)
 
     echo -e "  网卡：${BOLD}${DEV:-unknown}${NC}"
     echo -e "  内核：${BOLD}${KERNEL}${NC}"
@@ -4460,7 +4465,8 @@ volcano_tcp_doctor() {
     echo -e "  拥塞控制：${BOLD}${CC}${NC}"
     echo -e "  默认队列：${BOLD}${QDISC}${NC}"
     echo -e "  BBR 模块：${BOLD}${BBR_MOD}${NC}"
-    echo -e "  DDNS 状态：${BOLD}$(ddns_status)${NC}"
+    echo -e "  DDNS 状态：${BOLD}${DDNS_ST}${NC}"
+    [ -n "$DDNS_MODE" ] && echo -e "  DDNS 模式：${BOLD}$([ "$DDNS_MODE" = "dual" ] && echo 'IPv4 + IPv6' || echo '仅 IPv4')${NC}"
     echo ""
     echo -e "  ${CYAN}建议：${NC}"
     if [ "$CC" != "bbr" ]; then
@@ -4477,6 +4483,11 @@ volcano_tcp_doctor() {
         warn "小内存机器建议优先使用 latency 低延迟/轻量预设"
     else
         info "可优先使用 balanced 均衡预设；大带宽再考虑 throughput"
+    fi
+    if [ "$DDNS_ST" = "stopped" ]; then
+        warn "DDNS 已安装但当前未自动更新，如在 NAT/动态公网环境下，建议恢复 cron 定时任务"
+    elif [ "$DDNS_ST" = "not_installed" ]; then
+        info "若机器在 NAT/动态公网环境下，可考虑启用 Cloudflare DDNS 保持解析同步"
     fi
 }
 
@@ -4535,10 +4546,68 @@ cf_json_get() {
     python3 -c "import sys,json; data=json.load(sys.stdin); print(${expr})" 2>/dev/null
 }
 
+ddns_cfg_get() {
+    local key="$1"
+    [ -f "$DDNS_ZONE_FILE" ] || return 1
+    grep "^${key}=" "$DDNS_ZONE_FILE" 2>/dev/null | head -1 | cut -d= -f2-
+}
+
+ddns_log_path() {
+    local log_path
+    log_path=$(ddns_cfg_get LOG)
+    if [ -n "$log_path" ]; then
+        echo "$log_path"
+    elif [ -f "$DDNS_LOG" ]; then
+        echo "$DDNS_LOG"
+    else
+        echo "$HOME/ddns.log"
+    fi
+}
+
+ddns_ensure_cron() {
+    if command -v crontab &>/dev/null; then
+        return 0
+    fi
+
+    info "未检测到 crontab，尝试安装 cron 环境..."
+    if command -v apt-get &>/dev/null; then
+        apt-get update -qq 2>/dev/null
+        apt-get install -y cron 2>/dev/null || apt-get install -y cronie 2>/dev/null || return 1
+    elif command -v apk &>/dev/null; then
+        apk add --no-cache dcron 2>/dev/null || apk add --no-cache cronie 2>/dev/null || return 1
+    elif command -v yum &>/dev/null; then
+        yum install -y cronie 2>/dev/null || return 1
+    elif command -v dnf &>/dev/null; then
+        dnf install -y cronie 2>/dev/null || return 1
+    else
+        return 1
+    fi
+
+    command -v crontab &>/dev/null
+}
+
+ddns_start_cron_service() {
+    for svc in cron crond dcron; do
+        if command -v systemctl &>/dev/null && pidof systemd &>/dev/null; then
+            systemctl enable "$svc" --quiet 2>/dev/null || true
+            systemctl start "$svc" 2>/dev/null && return 0
+        fi
+        if command -v rc-service &>/dev/null; then
+            rc-service "$svc" start 2>/dev/null && return 0
+        fi
+        if command -v service &>/dev/null; then
+            service "$svc" start 2>/dev/null && return 0
+        fi
+    done
+    return 1
+}
+
 # ── 检测 DDNS 安装状态 ────────────────────────────────────
 ddns_status() {
     if [ ! -f "$DDNS_SCRIPT" ]; then
         echo "not_installed"
+    elif ! command -v crontab &>/dev/null; then
+        echo "stopped"
     elif ! crontab -l 2>/dev/null | grep -q "ddns.sh"; then
         echo "stopped"
     else
@@ -4558,6 +4627,11 @@ ddns_install() {
             pkg_install "$cmd" &>/dev/null
         fi
     done
+    if ! ddns_ensure_cron; then
+        error "无法安装或启用 crontab/cron，请先手动安装 cron 后重试"
+        return
+    fi
+    ddns_start_cron_service >/dev/null 2>&1 || warn "cron 服务未能自动启动，请稍后手动检查 cron/crond 状态"
 
     echo -e "  ${CYAN}$(printf '─%.0s' $(seq 1 38))${NC}"
     read -rp "  子域名（如 home）: " DDNS_SUB
@@ -4679,12 +4753,16 @@ ddns_install() {
     echo "$DDNS_TOKEN" > "$DDNS_TOKEN_FILE"
     chmod 600 "$DDNS_TOKEN_FILE"
 
+    touch "$DDNS_LOG" 2>/dev/null || { DDNS_LOG="$HOME/ddns.log"; touch "$DDNS_LOG"; }
+    chmod 644 "$DDNS_LOG" 2>/dev/null || true
+
     {
         echo "DOMAIN=${DDNS_DOMAIN}"
         echo "ZONE=${DDNS_ZONE}"
         echo "MODE=${DDNS_MODE}"
         echo "PROXIED=${DDNS_PROXIED}"
         echo "TTL=${DDNS_TTL}"
+        echo "LOG=${DDNS_LOG}"
     } > "$DDNS_ZONE_FILE"
 
     cat > "$DDNS_SCRIPT" << 'DDNS_INNER'
@@ -4706,13 +4784,15 @@ API_TOKEN=$(cat "$TOKEN_FILE" 2>/dev/null)
 [ -z "$API_TOKEN" ] && exit 1
 
 CURRENT_IP4=$(curl -4 -s --max-time 5 https://api.ipify.org 2>/dev/null \
-    || curl -4 -s --max-time 5 https://ifconfig.me 2>/dev/null \
-    || curl -4 -s --max-time 5 https://ip.sb 2>/dev/null)
+    || curl -4 -s --max-time 5 https://ipv4.icanhazip.com 2>/dev/null | tr -d '\r\n ' \
+    || curl -4 -s --max-time 5 https://ifconfig.me/ip 2>/dev/null | tr -d '\r\n ' \
+    || curl -4 -s --max-time 5 https://ip.sb 2>/dev/null | tr -d '\r\n ')
 CURRENT_IP6=""
 if [ "$MODE" = "dual" ]; then
     CURRENT_IP6=$(curl -6 -s --max-time 5 https://api64.ipify.org 2>/dev/null \
-        || curl -6 -s --max-time 5 https://ifconfig.me 2>/dev/null \
-        || curl -6 -s --max-time 5 https://ip.sb 2>/dev/null)
+        || curl -6 -s --max-time 5 https://ipv6.icanhazip.com 2>/dev/null | tr -d '\r\n ' \
+        || curl -6 -s --max-time 5 https://ifconfig.me/ip 2>/dev/null | tr -d '\r\n ' \
+        || curl -6 -s --max-time 5 https://ip.sb 2>/dev/null | tr -d '\r\n ')
 fi
 
 if [ -z "$CURRENT_IP4" ]; then
@@ -4770,12 +4850,10 @@ DDNS_INNER
     sed -i "s/__TTL__/${DDNS_TTL}/g" "$DDNS_SCRIPT"
     chmod +x "$DDNS_SCRIPT"
 
-    touch "$DDNS_LOG" 2>/dev/null || { DDNS_LOG="$HOME/ddns.log"; touch "$DDNS_LOG"; }
-    chmod 644 "$DDNS_LOG" 2>/dev/null || true
-
     local CRON_JOB="*/5 * * * * ${DDNS_SCRIPT} >> ${DDNS_LOG} 2>&1"
     ( crontab -l 2>/dev/null | grep -v "ddns.sh"; echo "$CRON_JOB" ) | crontab -
     info "crontab 已设置（每5分钟自动更新）✓"
+    ddns_start_cron_service >/dev/null 2>&1 || true
 
     echo ""
     info "立即执行一次测试..."
@@ -4798,6 +4876,10 @@ ddns_pause() {
     if [ ! -f "$DDNS_SCRIPT" ]; then
         error "DDNS 未安装"; return
     fi
+    if ! command -v crontab &>/dev/null; then
+        warn "未检测到 crontab，当前视为已暂停"
+        return
+    fi
     ( crontab -l 2>/dev/null | grep -v "ddns.sh" ) | crontab - 2>/dev/null
     info "DDNS 自动更新已暂停 ✓"
 }
@@ -4806,10 +4888,14 @@ ddns_resume() {
     if [ ! -f "$DDNS_SCRIPT" ]; then
         error "DDNS 未安装"; return
     fi
-    local LOG="$DDNS_LOG"
-    [ ! -f "$LOG" ] && LOG="$HOME/ddns.log"
+    if ! ddns_ensure_cron; then
+        error "无法安装或启用 crontab/cron，请先手动安装 cron 后重试"
+        return
+    fi
+    local LOG="$([ -n "$(ddns_log_path)" ] && ddns_log_path || echo "$HOME/ddns.log")"
     local CRON_JOB="*/5 * * * * ${DDNS_SCRIPT} >> ${LOG} 2>&1"
     ( crontab -l 2>/dev/null | grep -v "ddns.sh"; echo "$CRON_JOB" ) | crontab -
+    ddns_start_cron_service >/dev/null 2>&1 || warn "cron 服务未能自动启动，请手动检查"
     info "DDNS 自动更新已恢复 ✓"
 }
 
@@ -4834,8 +4920,8 @@ ddns_uninstall() {
 # ── 查看日志 ──────────────────────────────────────────────
 ddns_view_logs() {
     print_header "DDNS 日志"
-    local LOG="$DDNS_LOG"
-    [ ! -f "$LOG" ] && LOG="$HOME/ddns.log"
+    local LOG
+    LOG=$(ddns_log_path)
     if [ ! -f "$LOG" ]; then
         warn "日志文件不存在"
         return
@@ -4872,8 +4958,8 @@ ddns_run_now() {
     fi
     info "正在更新..."
     if bash "$DDNS_SCRIPT"; then
-        local LOG="$DDNS_LOG"
-        [ ! -f "$LOG" ] && LOG="$HOME/ddns.log"
+        local LOG
+        LOG=$(ddns_log_path)
         tail -1 "$LOG" 2>/dev/null | while IFS= read -r l; do
             echo -e "  ${GREEN}$l${NC}"
         done
@@ -4904,31 +4990,35 @@ ddns_menu() {
         print_header "Cloudflare DDNS"
 
         if [ "$D_ST" != "not_installed" ] && [ -f "$DDNS_ZONE_FILE" ]; then
-            local D_DOMAIN D_ZONE D_MODE D_PROXIED D_TTL
-            D_DOMAIN=$(grep "^DOMAIN=" "$DDNS_ZONE_FILE" | cut -d= -f2)
-            D_ZONE=$(grep "^ZONE=" "$DDNS_ZONE_FILE" | cut -d= -f2)
-            D_MODE=$(grep "^MODE=" "$DDNS_ZONE_FILE" | cut -d= -f2)
-            D_PROXIED=$(grep "^PROXIED=" "$DDNS_ZONE_FILE" | cut -d= -f2)
-            D_TTL=$(grep "^TTL=" "$DDNS_ZONE_FILE" | cut -d= -f2)
+            local D_DOMAIN D_ZONE D_MODE D_PROXIED D_TTL D_LOG
+            D_DOMAIN=$(ddns_cfg_get DOMAIN)
+            D_ZONE=$(ddns_cfg_get ZONE)
+            D_MODE=$(ddns_cfg_get MODE)
+            D_PROXIED=$(ddns_cfg_get PROXIED)
+            D_TTL=$(ddns_cfg_get TTL)
+            D_LOG=$(ddns_log_path)
             echo -e "  状态 : ${D_COLOR}${BOLD}${D_LABEL}${NC}"
             echo -e "  域名 : ${BOLD}${D_DOMAIN}${NC}"
             echo -e "  模式 : ${BOLD}$([ "$D_MODE" = "dual" ] && echo 'IPv4 + IPv6' || echo '仅 IPv4')${NC}"
             echo -e "  代理 : ${BOLD}$([ "$D_PROXIED" = "true" ] && echo '开启' || echo '关闭')${NC}"
             echo -e "  TTL  : ${BOLD}${D_TTL:-60}${NC}"
+            echo -e "  日志 : ${DIM}${D_LOG}${NC}"
             echo -e "  定时 : ${DIM}每5分钟自动更新${NC}"
-            local LAST_LOG; LAST_LOG=$(tail -1 "$DDNS_LOG" 2>/dev/null || tail -1 "$HOME/ddns.log" 2>/dev/null)
+            local LAST_LOG; LAST_LOG=$(tail -1 "$D_LOG" 2>/dev/null)
             [ -n "$LAST_LOG" ] && echo -e "  最新 : ${DIM}${LAST_LOG}${NC}"
         elif [ -f "$DDNS_ZONE_FILE" ]; then
-            local D_DOMAIN D_MODE D_PROXIED
-            D_DOMAIN=$(grep "^DOMAIN=" "$DDNS_ZONE_FILE" | cut -d= -f2)
-            D_MODE=$(grep "^MODE=" "$DDNS_ZONE_FILE" | cut -d= -f2)
-            D_PROXIED=$(grep "^PROXIED=" "$DDNS_ZONE_FILE" | cut -d= -f2)
+            local D_DOMAIN D_MODE D_PROXIED D_LOG
+            D_DOMAIN=$(ddns_cfg_get DOMAIN)
+            D_MODE=$(ddns_cfg_get MODE)
+            D_PROXIED=$(ddns_cfg_get PROXIED)
+            D_LOG=$(ddns_log_path)
             local D_TOKEN_HINT=""
             [ -f "$DDNS_TOKEN_FILE" ] && D_TOKEN_HINT="${DIM}Token 已保存${NC}" || D_TOKEN_HINT="${YELLOW}Token 未找到${NC}"
             echo -e "  状态 : ${D_COLOR}${BOLD}${D_LABEL}${NC}"
             echo -e "  域名 : ${BOLD}${D_DOMAIN}${NC}"
             echo -e "  模式 : ${BOLD}$([ "$D_MODE" = "dual" ] && echo 'IPv4 + IPv6' || echo '仅 IPv4')${NC}"
             echo -e "  代理 : ${BOLD}$([ "$D_PROXIED" = "true" ] && echo '开启' || echo '关闭')${NC}"
+            echo -e "  日志 : ${DIM}${D_LOG}${NC}"
             echo -e "  Token : $D_TOKEN_HINT"
             echo ""
             echo -e "  ${DIM}检测到历史配置，可重新安装恢复定时任务${NC}"
